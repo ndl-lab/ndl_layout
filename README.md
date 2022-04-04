@@ -42,12 +42,12 @@ use_show オプションを追加すると処理結果をGUI上で確認する�
 
 img_pathsオプションで画像リストを指定する例
 ```bash
-python -m tools.process --img_paths image/dir/path/*.jpg --use_show --output_path layout_prediction.xml
+python -m tools.process --img_paths image/dir/path/*.jpg --use_show --output_path layout_prediction.xml --config ./models/ndl_layout_config.py --checkpoint ./models/epoch_140_all_eql_bt.pth
 ```
 
 list_path オプションで画像リストを指定する例
 ```bash
-python -m tools.process --list_path image_list_file.list --use_show --output_path layout_prediction.xml
+python -m tools.process --list_path image_list_file.list --use_show --output_path layout_prediction.xml --config ./models/ndl_layout_config.py --checkpoint ./models/epoch_140_all_eql_bt.pth
 ```
 
 ## tools/preprocess.py : 学習画像の追加＆変換
