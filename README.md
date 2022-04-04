@@ -1,6 +1,7 @@
 # NDLレイアウト認識用リポジトリ
 
 レイアウト要素を抽出するためのモジュールのリポジトリです。
+
 本プログラムは、国立国会図書館が株式会社モルフォAIソリューションズに委託して作成したものです。
 
 
@@ -59,7 +60,6 @@ output_dir内に画像のシンボリックリンク（またはコピー）とC
 アノテーションファイルは、data.json(全データのアノテーション)、train.json(ランダムに全体の9割)、test.json(train以外の残る1割)を生成する。
 
 2) mmdetection/tools/train_ndl.py を使用し、モデルを学習する。
-最終提出モデルのconfigは`configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py`
 ```
 python tools/train_ndl.py configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py
 ```
@@ -67,6 +67,6 @@ python tools/train_ndl.py configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py
 
 work directoryに、学習したモデル(epoch_XX.pth または latest.pth)とconfigファイル(train_ndl.pyのオプションを使用した場合その内容も反映)、学習時のログファイル(.logと.log.json)が保存される。
 
-なお、このリポジトリで公開しているモデルの学習時の初期重みには
+なお、このリポジトリで公開しているモデル（設定ファイルは`configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py`を参照）の学習時の初期重みには
 https://download.openmmlab.com/mmdetection/v2.0/cascade_rcnn/cascade_rcnn_r50_fpn_1x_coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth
 を使用した。
