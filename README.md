@@ -6,10 +6,26 @@
 
 
 # 環境構築
-* 動作環境
-  * Python3.6 で動作を確認しています。
-  * 必要ライブラリは以下の通りです。
-    * カスタマイズした [mmdetection](https://github.com/ndl-lab/mmdetection)を利用しています。
+
+python3.7かつ、cuda 11.1をインストール済みの環境の場合
+ndl_layoutディレクトリ直下で以下のコマンドを実行する。
+```
+pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
+pip install tqdm lmdb opencv-python six natsort nltk more-itertools
+wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/ndl_layout_config.py -P ./models
+wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/epoch_140_all_eql_bt.pth -P ./models
+```
+
+くわえて、元リポジトリ(https://github.com/open-mmlab/mmdetection)
+をカスタマイズした[mmdetection](https://github.com/ndl-lab/mmdetection)
+に依存しているため、下記のようにリポジトリの追加とインストールを行う。
+
+```bash
+git clone https://github.com/ndl-lab/mmdetection
+cd mmdetection
+python setup.py bdist_wheel
+pip install dist/*.whl
+```
 
 
 # 使い方
@@ -17,7 +33,7 @@
 
 ## tools/process.py : 推論用モジュール + CLI
 
-学習結果を使って推論を実行する。学習済みのモデルを `ndl_layout/models` 下に配置する必要がある。
+学習結果を使って推論を実行する。学習済みのモデルは`ndl_layout/models` 以下にあるものとする。
 
 画像リストを引数で指定するには img_paths オプションを、画像リストをファイルから読み込む場合には list_path オプションを指定する。
 
