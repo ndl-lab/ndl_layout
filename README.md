@@ -66,7 +66,7 @@ python -m tools.preprocess images_data_dir output_dir --use_link
 
 
 ## 学習時の手順
-1) ndl_layout/tools/preprocess.pyを使用し、NDL形式の画像とアノテーションファイル(xml)をCOCO形式に変換し保存する。
+1) ndl_layout/tools/preprocess.pyを使用し、NDLOCRXMLDataset形式の画像とアノテーションファイル(xml)をCOCO形式に変換し保存する。
 ```
 python -m tools.preprocess images_data_dir output_dir --use_link
 ```
