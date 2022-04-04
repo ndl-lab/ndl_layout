@@ -10,8 +10,6 @@
 python3.7かつ、cuda 11.1をインストール済みの環境の場合
 ndl_layoutディレクトリ直下で以下のコマンドを実行する。
 ```
-pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
-pip install tqdm lmdb opencv-python six natsort nltk more-itertools
 wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/ndl_layout_config.py -P ./models
 wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/epoch_140_all_eql_bt.pth -P ./models
 ```
