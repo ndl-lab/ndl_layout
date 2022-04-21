@@ -68,6 +68,7 @@ python -m tools.preprocess images_data_dir output_dir --use_link
 ## 学習時の手順
 1) ndl_layout/tools/preprocess.pyを使用し、NDLOCRXMLDataset形式の画像とアノテーションファイル(xml)をCOCO形式に変換し保存する。
 ```
+cd mmdetection
 python -m tools.preprocess images_data_dir output_dir --use_link
 ```
 output_dir内に画像のシンボリックリンク（またはコピー）とCOCO形式のアノテーションファイル(.json)を保存する。
@@ -76,6 +77,7 @@ output_dir内に画像のシンボリックリンク（またはコピー）とC
 
 2) mmdetection/tools/train_ndl.py を使用し、モデルを学習する。
 ```
+cd mmdetection
 python tools/train_ndl.py configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py
 ```
 学習データ、work directory、初期値、学習回数等はconfigファイル内で指定するか、train_ndl.pyのオプションを使用する。オプションで指定されたものが優先される。
