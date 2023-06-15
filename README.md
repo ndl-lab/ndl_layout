@@ -17,9 +17,7 @@ pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --ind
 wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/epoch_140_all_eql_bt.pth -P ./models
 ```
 
-くわえて、元リポジトリ(https://github.com/open-mmlab/mmdetection)
-をカスタマイズした[mmdetection](https://github.com/ndl-lab/mmdetection)
-に依存しているため、下記のようにリポジトリの追加とインストールを行う。
+くわえて、下記のようにリポジトリの追加とインストールを行う。
 
 ```bash
 git clone https://github.com/ndl-lab/mmdetection -b v3.0.0
