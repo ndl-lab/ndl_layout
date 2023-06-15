@@ -11,7 +11,7 @@ from pathlib import Path
 from .utils import auto_run
 from typing import List
 import xml.etree.ElementTree as ET
-
+import mmengine
 import mmcv
 from mmdet.apis import (inference_detector, init_detector)
 
@@ -44,7 +44,8 @@ class LayoutDetector:
     def __init__(self, config: str, checkpoint: str, device: str):
         print(f'load from config={config}, checkpoint={checkpoint}')
         self.load(config, checkpoint, device)
-        cfg = mmcv.Config.fromfile(config)
+        #print(self.model)
+        cfg = mmengine.Config.fromfile(config)
         self.classes = cfg.classes
         self.colors = generate_class_colors(len(self.classes))
 
@@ -86,15 +87,14 @@ class LayoutDetector:
 
     def draw_rects_with_data(self, img, result, score_thr: float = 0.3, border: int = 3, show_legand: bool = True):
         import cv2
-        for c in range(len(result)):
+        for line,score,c in zip(result.pred_instances.bboxes,result.pred_instances.scores,result.pred_instances.labels):
             color = self.colors[c]
             color = (int(color[0]), int(color[1]), int(color[2]))
-            for pred in result[c]:
-                if float(pred[4]) < score_thr:
-                    continue
-                x0, y0 = int(pred[0]), int(pred[1])
-                x1, y1 = int(pred[2]), int(pred[3])
-                img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
+            if float(score) < score_thr:
+                continue
+            x0, y0 = int(line[0]), int(line[1])
+            x1, y1 = int(line[2]), int(line[3])
+            img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
 
         sz = max(img.shape[0], img.shape[1])
         scale = 1024.0 / sz
@@ -122,25 +122,23 @@ def convert_to_xml_string(img_path, classes, result, score_thr: float = 0.3):
 
     img_name = os.path.basename(img_path)
     s = f'<PAGE IMAGENAME = "{img_name}" WIDTH = "{img_w}" HEIGHT = "{img_h}">\n'
-
-    for c in range(len(classes)):
+    for line,score,c in zip(result.pred_instances.bboxes,result.pred_instances.scores,result.pred_instances.labels):
         cls = classes[c]
         if cls.startswith('line_'):
-            for line in result[c]:
-                conf = float(line[4])
-                if conf < score_thr:
-                    continue
-                x, y = int(line[0]), int(line[1])
-                w, h = int(line[2] - line[0]), int(line[3] - line[1])
-                s += f'<LINE TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></LINE>\n'
+            conf = float(score)
+            if conf < score_thr:
+                continue
+            x, y = int(line[0]), int(line[1])
+            w, h = int(line[2] - line[0]), int(line[3] - line[1])
+            s += f'<LINE TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></LINE>\n'
         elif cls.startswith('block_'):
-            for block in result[c]:
-                conf = float(block[4])
-                if conf < score_thr:
-                    continue
-                x, y = int(block[0]), int(block[1])
-                w, h = int(block[2] - block[0]), int(block[3] - block[1])
-                s += f'<BLOCK TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></BLOCK>\n'
+            block=line
+            conf = float(score)
+            if conf < score_thr:
+                continue
+            x, y = int(block[0]), int(block[1])
+            w, h = int(block[2] - block[0]), int(block[3] - block[1])
+            s += f'<BLOCK TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></BLOCK>\n'
 
     s += '</PAGE>\n'
     return s
@@ -153,25 +151,24 @@ def convert_to_xml_string_with_data(img, img_path, classes, result, score_thr: f
 
     img_name = os.path.basename(img_path)
     s = f'<PAGE IMAGENAME = "{img_name}" WIDTH = "{img_w}" HEIGHT = "{img_h}">\n'
-
-    for c in range(len(classes)):
+    #print(result)
+    for line,score,c in zip(result.pred_instances.bboxes,result.pred_instances.scores,result.pred_instances.labels):
         cls = classes[c]
         if cls.startswith('line_'):
-            for line in result[c]:
-                conf = float(line[4])
-                if conf < score_thr:
-                    continue
-                x, y = int(line[0]), int(line[1])
-                w, h = int(line[2] - line[0]), int(line[3] - line[1])
-                s += f'<LINE TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></LINE>\n'
+            conf = float(score)
+            if conf < score_thr:
+                continue
+            x, y = int(line[0]), int(line[1])
+            w, h = int(line[2] - line[0]), int(line[3] - line[1])
+            s += f'<LINE TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></LINE>\n'
         elif cls.startswith('block_'):
-            for block in result[c]:
-                conf = float(block[4])
-                if conf < score_thr:
-                    continue
-                x, y = int(block[0]), int(block[1])
-                w, h = int(block[2] - block[0]), int(block[3] - block[1])
-                s += f'<BLOCK TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></BLOCK>\n'
+            block=line
+            conf = float(score)
+            if conf < score_thr:
+                continue
+            x, y = int(block[0]), int(block[1])
+            w, h = int(block[2] - block[0]), int(block[3] - block[1])
+            s += f'<BLOCK TYPE = "{name_to_org_name(cls)}" X = "{x}" Y = "{y}" WIDTH = "{w}" HEIGHT = "{h}" CONF = "{conf:0.3f}"></BLOCK>\n'
 
     s += '</PAGE>\n'
     return s

@@ -10,20 +10,17 @@
 
 # 環境構築
 
-python3.7かつ、cuda 11.1をインストール済みの環境の場合
+python3.8かつ、cuda 11.8をインストール済みの環境の場合
 ndl_layoutディレクトリ直下で以下のコマンドを実行する。
 ```
-pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
-wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/ndl_layout_config.py -P ./models
+pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
 wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/epoch_140_all_eql_bt.pth -P ./models
 ```
 
-くわえて、元リポジトリ(https://github.com/open-mmlab/mmdetection)
-をカスタマイズした[mmdetection](https://github.com/ndl-lab/mmdetection)
-に依存しているため、下記のようにリポジトリの追加とインストールを行う。
+くわえて、下記のようにリポジトリの追加とインストールを行う。
 
 ```bash
-git clone https://github.com/ndl-lab/mmdetection
+git clone https://github.com/ndl-lab/mmdetection -b v3.0.0
 cd mmdetection
 python setup.py bdist_wheel
 pip install dist/*.whl
