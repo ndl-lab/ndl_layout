@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2022, National Diet Library, Japan
+# Copyright (c) 2023, National Diet Library, Japan
 #
 # This software is released under the CC BY 4.0.
 # https://creativecommons.org/licenses/by/4.0/
 
 import argparse
 import xml.etree.ElementTree as ET
+
+super_types = ['TEXTBLOCK']
 
 
 def parse_args():
@@ -60,6 +62,46 @@ def vh_overlapping(elm_a, elm_b):
         else:
             return True
 
+def is_overlapped(elm, page, overlap_th):
+    if elm.tag != 'LINE':
+        return False
+    vh_overlap_count = 0
+    overlapped = False
+    for elm_ref in page:
+        if elm_ref.tag in super_types: # elm_ref is TEXTBLOCK
+            for sub_elm_ref in elm_ref:
+                if sub_elm_ref.tag == 'SHAPE':
+                    continue
+                if sub_elm_ref.tag == 'LINE' and elm.attrib['TYPE'] == sub_elm_ref.attrib['TYPE']:
+                    if vh_overlapping(elm, sub_elm_ref):
+                        vh_overlap_count += 1
+                        if vh_overlap_count >= overlap_th:
+                            return True
+        elif elm_ref.tag == 'BLOCK' and elm_ref.attrib['TYPE'] == '広告':
+            for sub_elm_ref in elm_ref:
+                if sub_elm_ref.tag == 'TEXTBLOCK':
+                    for ssub_elm_ref in reversed(sub_elm_ref):
+                        if ssub_elm_ref.tag == "SHAPE":
+                            continue
+                        if ssub_elm_ref.tag == 'LINE' and elm.attrib['TYPE'] == ssub_elm_ref.attrib['TYPE']:
+                            if vh_overlapping(elm, ssub_elm_ref):
+                                vh_overlap_count += 1
+                                if vh_overlap_count >= overlap_th:
+                                    return True
+                 # LINE in block ad
+                elif sub_elm_ref.tag == 'LINE' and elm.attrib['TYPE'] == sub_elm_ref.attrib['TYEP']:
+                    if vh_overlapping(elm, sub_elm_ref):
+                        vh_overlap_count += 1
+                        if vh_overlap_count >= overlap_th:
+                            return True
+        # elm_ref is LINE
+        elif elm.tag == elm_ref.tag and elm.attrib['TYPE'] == elm_ref.attrib['TYPE']:
+            if vh_overlapping(elm, elm_ref):
+                vh_overlap_count += 1
+                if vh_overlap_count >= overlap_th:
+                    return True
+
+    return overlapped
 
 def refine_vh_confusion(root, overlap_th):
     print('Refine VH Confusion')
@@ -68,21 +110,36 @@ def refine_vh_confusion(root, overlap_th):
 
         for elm in reversed(page):
             # vh overlap count
-            vh_overlap_count = 0
-            for elm_ref in page:
-                if elm.tag == 'LINE' and elm.tag == elm_ref.tag and elm.attrib['TYPE'] == elm_ref.attrib['TYPE']:
-                    if vh_overlapping(elm, elm_ref):
-                        vh_overlap_count += 1
-                if vh_overlap_count >= overlap_th:
+            if elm.tag in super_types: # tag is TEXTBLOCK
+                for sub_elm in reversed(elm):
+                    if sub_elm.tag == 'SHAPE':
+                        continue
+                    if is_overlapped(sub_elm, page, overlap_th):
+                        elm.remove(sub_elm)
+            elif elm.tag == 'BLOCK' and elm.attrib['TYPE'] == '広告':
+                for sub_elm in reversed(elm):
+                    if sub_elm.tag in super_types: # if TEXTBLOCK
+                        for ssub_elm in reversed(sub_elm):
+                            if sub_elm.tag == 'SHAPE':
+                                continue
+                            # line in textblock in block_ad
+                            if is_overlapped(ssub_elm, page, overlap_th):
+                                sub_elm.remove(ssub_elm)
+                                break
+                    else: # Lines in block_ad and outside textblock
+                        if is_overlapped(sub_elm, page, overlap_th):
+                            elm.remove(sub_elm)
+                            break
+            else :
+                if is_overlapped(elm, page, overlap_th):
                     page.remove(elm)
-                    break
     return root
 
 
-def include(parent, child, margin=0.05):
+def include(child, parent, margin=0.05):
     p_x1, p_y1, p_x2, p_y2 = get_points(parent)
     c_x1, c_y1, c_x2, c_y2 = get_points(child)
-    if p_x1 == c_x1 and p_y1 == c_y1 and p_x2 == c_x2 and p_y2 == c_y2:
+    if p_x1 == c_x1 and p_y1 == c_y1 and p_x2 == c_x2 and p_y2 == c_y2: # perfect same
         return False
 
     w_m = int(child.attrib['WIDTH']) * margin
@@ -93,23 +150,77 @@ def include(parent, child, margin=0.05):
     else:
         return False
 
+def is_included(elm, page, margin=0.05, category_option='SAME'):
+    include_flag = False
+    for elm_ref in page:  # parent
+        if elm_ref.tag in super_types: # TEXTBLOCK
+            for sub_elm_ref in reversed(elm_ref): # elm in TEXTBLOCK
+                if sub_elm_ref.tag == 'SHAPE':
+                    continue
+                if category_option == 'SAME':
+                    if elm.attrib['TYPE'] != sub_elm_ref.attrib['TYPE']:
+                        continue
+                elif category_option == 'SIM':
+                    if elm.tag != sub_elm_ref.tag:
+                        continue
+                if include(child=elm, parent=sub_elm_ref, margin=margin):
+                    return True
+        elif elm_ref.tag == "BLOCK" and elm_ref.attrib['TYPE']=='広告': # block_ad
+            for sub_elm_ref in reversed(elm_ref):
+                if sub_elm_ref.tag in super_types: # textblock in block_ad
+                    for ssub_elm_ref in reversed(sub_elm_ref): # Lines in textblock in block_ad
+                        if ssub_elm_ref.tag == "SHPAE":
+                            continue
+                        if category_option == 'SAME':
+                            if elm.attrib['TYPE'] != ssub_elm_ref.attrib['TYPE']:
+                                continue
+                        elif category_option == 'SIM':
+                            if elm.tag != ssub_elm_ref.tag:
+                                continue
+                        if inlude(child=elm, parent=ssub_elm_ref, margin=margin):
+                            return True
+        else: # not TEXTBLOCK nor block_ad
+            if category_option == 'SAME':
+                if elm.attrib['TYPE'] != elm_ref.attrib['TYPE']:
+                    continue
+            elif category_option == 'SIM':
+                if elm.tag != elm_ref.tag:
+                    continue
+            if include(child=elm, parent=elm_ref, margin=margin):
+                return True
+
+    return include_flag
 
 def refine_inclusion(root, margin=0.05, category_option='SAME'):
     print('Refine inclusion')
     for page in root:
         print(page.attrib['IMAGENAME'])
         for elm in reversed(page):  # child
-            include_flag = False
-            for elm_ref in page:  # parent
-                if category_option == 'SAME':
-                    if elm.attrib['TYPE'] != elm_ref.attrib['TYPE']:
+            if elm.tag in super_types: # if TEXTBLOCK
+                for sub_elm in reversed(elm):
+                    if sub_elm.tag == 'SHAPE': # skip shape info
                         continue
-                elif category_option == 'SIM':
-                    if elm.tag != elm_ref.tag:
-                        continue
-
-                include_flag = include(parent=elm_ref, child=elm, margin=margin)
-                if include_flag:
+                    # include_flag = False
+                    if is_included(sub_elm, page, margin=margin, category_option=category_option):
+                        elm.remove(sub_elm)
+                        break
+            elif elm.tag == "BLOCK" and elm.attrib['TYPE']=='広告':
+                for sub_elm in reversed(elm):
+                    if sub_elm.tag in super_types: # if TEXTBLOCK
+                        for ssub_elm in reversed(sub_elm):
+                            if sub_elm.tag == 'SHAPE':
+                                continue
+                            # line in textblock in block_ad
+                            if is_included(ssub_elm, page, margin=margin, category_option=category_option):
+                                sub_elm.remove(ssub_elm)
+                                break
+                    else: # Lines in block_ad and outside textblock
+                        if is_included(sub_elm, page, margin=margin, category_option=category_option):
+                            elm.remove(sub_elm)
+                            break
+            else:
+                # include_flag = False
+                if is_included(elm, page, margin=margin, category_option=category_option):
                     page.remove(elm)
                     break
     return root

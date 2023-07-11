@@ -1,89 +1,79 @@
-# NDLOCR用レイアウト認識モジュール
+# NDLレイアウト認識用リポジトリ
 
-レイアウト要素を抽出するためのモジュールのリポジトリです。
-
+レイアウト要素を抽出するモジュールのリポジトリです。
 本プログラムは、国立国会図書館が株式会社モルフォAIソリューションズに委託して作成したものです。
+本プログラムは、国立国会図書館がCC BY 4.0ライセンスで公開するものです。詳細については LICENSEをご覧ください。
 
-本プログラムは、国立国会図書館がCC BY 4.0ライセンスで公開するものです。詳細については
-[LICENSE](./LICENSE
-)をご覧ください。
+※スクリプトファイルはトップディレクトリで実行する必要があることに注意。
 
-# 環境構築
-
-python3.8かつ、cuda 11.8をインストール済みの環境の場合
-ndl_layoutディレクトリ直下で以下のコマンドを実行する。
-```
-pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
-wget https://lab.ndl.go.jp/dataset/ndlocr/ndl_layout/epoch_140_all_eql_bt.pth -P ./models
-```
-
-くわえて、下記のようにリポジトリの追加とインストールを行う。
-
-```bash
-git clone https://github.com/ndl-lab/mmdetection -b v3.0.0
-cd mmdetection
-python setup.py bdist_wheel
-pip install dist/*.whl
-```
+* 動作環境
+  * Python3.8 で動作を確認しています。
+  * `tools/process_textblock.py` は実行する計算機のスペック、入力画像によってはメモリ不足になる場合があります。メモリ不足になる場合、 
+  `mmdetection` の [`mmdetection/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py`](https://github.com/open-mmlab/mmdetection/blob/master/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py#L19) の以下の部分の `GPU_MEM_LIMIT` の値を小さくすることで回避できます。
+  ```
+  # TODO: This memory limit may be too much or too little. It would be better to
+  # determine it based on available resources.
+  GPU_MEM_LIMIT = 1024**3  # 1 GB memory limit
+  ```
 
 
-# 使い方
-※スクリプトファイルはndl_layoutディレクトリ直下で実行すること
+* `tools/ndl_parser.py`
 
-## tools/process.py : 推論用モジュール + CLI
+NDL の xml をパースして読み込む用のモジュール。
 
-学習結果を使って推論を実行する。学習済みのモデルは`ndl_layout/models` 以下にあるものとする。
-
-画像リストを引数で指定するには img_paths オプションを、画像リストをファイルから読み込む場合には list_path オプションを指定する。
-
-output_path で出力 XML ファイルの格納先を変更することができる。（デフォルトは layout_prediction.xml）
-
-use_show オプションを追加すると処理結果をGUI上で確認することができる。
-
-img_pathsオプションで画像リストを指定する例
-```bash
-python -m tools.process --img_paths image/dir/path/*.jpg --use_show --output_path layout_prediction.xml --config ./models/ndl_layout_config.py --checkpoint ./models/epoch_140_all_eql_bt.pth
-```
-
-list_path オプションで画像リストを指定する例
-```bash
-python -m tools.process --list_path image_list_file.list --use_show --output_path layout_prediction.xml --config ./models/ndl_layout_config.py --checkpoint ./models/epoch_140_all_eql_bt.pth
-```
-
-## tools/preprocess.py : 学習画像の追加＆変換
+* `tools/preprocess.py` : 学習画像の追加＆変換
 
 画像のファイル名の変換、縮小を行い、MS COCO 形式に整形。
 
-```bash
+```
 python -m tools.preprocess images_data_dir output_dir --use_link
 ```
 
-出力解像度を下げる必要がない場合には、`--use_link`オプションを指定する。
-
-高解像の場合など、解像度を下げたい場合には `--use_shrink` を使うと画像サイズとアノテーションを半分のサイズに縮小して出力する。
-
-本リポジトリの追加学習に使用可能なファイル(アノテーション情報の含まれるjson及び、前処理後の画像)は `output_dir` で指定したディレクトリに出力される。 
+基本的には`--use_link`オプションを指定、高解像の場合などは `--use_shrink` を使うと画像サイズとアノテーションを半分のサイズに縮小して出力
+学習に使用するファイルは `output_dir` に出力。 (json と 前処理された image)
 
 
-## 学習時の手順
-1) ndl_layout/tools/preprocess.pyを使用し、NDLOCRXMLDataset形式の画像とアノテーションファイル(xml)をCOCO形式に変換し保存する。
+* `tools/process.py` : 推論用モジュール
+
+学習済みモデルを使って推論を実行。
+学習済みのモデルは `ndl_layout/models` 下に下記のコマンドで配置する（または推論時に--checkpointオプションで指定可能）。
+`
+wget -nc https://lab.ndl.go.jp/dataset/ndlocr_v2/ndl_layout/epoch_375.pth -P ./ndl_layout/models
+`
+この推論スクリプトは、Detection（矩形の検出）のみ行うモデル（Cascade RCNN等）専用。
+DetectionとInstance Segmentataionを同時に行うモデル（Cascade Mask RCNN等）を使用する場合は後述の `tools/process_textblock.py` を使用する。
+
+画像リストを引数で指定するには `img_paths` オプションを、画像リストをファイルから読み込む場合には `list_path` オプションを指定する。
+
+`output_path` に出力 XML ファイルの格納先を指定可能。（デフォルトは `layout_prediction.xml`）
+
+`use_show` オプションを追加すると処理結果のGUIでの確認も可能。
+
+`img_paths` 使用の場合は
 ```
-cd mmdetection
-python -m tools.preprocess images_data_dir output_dir --use_link
+python -m tools.process --img_paths image/dir/path/*.jpg --use_show --output_path layout_prediction.xml
 ```
-output_dir内に画像のシンボリックリンク（またはコピー）とCOCO形式のアノテーションファイル(.json)を保存する。
 
-アノテーションファイルは、data.json(全データのアノテーション)、train.json(ランダムに全体の9割)、test.json(train以外の残る1割)を生成する。
-
-2) mmdetection/tools/train_ndl.py を使用し、モデルを学習する。
+一方で `list_path` 使用の場合は
 ```
-cd mmdetection
-python tools/train_ndl.py configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py
+python -m tools.process --list_path image_list_file.list --use_show --output_path layout_prediction.xml
 ```
-学習データ、work directory、初期値、学習回数等はconfigファイル内で指定するか、train_ndl.pyのオプションを使用する。オプションで指定されたものが優先される。
 
-work directoryに、学習したモデル(epoch_XX.pth または latest.pth)とconfigファイル(train_ndl.pyのオプションを使用した場合その内容も反映)、学習時のログファイル(.logと.log.json)が保存される。
 
-なお、このリポジトリで公開しているモデル（設定ファイルは`configs/ndl/cascade_rcnn_r50_fpn_1x_ndl_1024_eql.py`を参照）の学習時の初期重みには
-https://download.openmmlab.com/mmdetection/v2.0/cascade_rcnn/cascade_rcnn_r50_fpn_1x_coco/cascade_rcnn_r50_fpn_1x_coco_20200316-3dc56deb.pth
-を使用した。
+
+* `tools/process_textblock.py` : 推論用モジュール
+
+使用方法、オプションは tools/process.py と同様。
+この推論スクリプトは、 Detection と Instance Segmentataion を同時に行うモデル（Cascade Mask RCNN等）用。本スクリプトでは、多数のDetection と Instance Segmentataionを行うため、実行する計算機のスペック、入力画像によってはメモリ不足になる場合があります。メモリ不足になる場合、 
+`mmdetection` の [`mmdetection/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py`](https://github.com/open-mmlab/mmdetection/blob/master/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py#L19) の `GPU_MEM_LIMIT` の値を小さくすることで回避できます。
+
+
+img_paths 使用の場合は
+```
+python -m tools.process_textblock --img_paths image/dir/path/*.jpg --use_show --output_path layout_prediction.xml
+```
+
+一方で list_path 使用の場合は
+```
+python -m tools.process_textblock --list_path image_list_file.list --use_show --output_path layout_prediction.xml
+```
