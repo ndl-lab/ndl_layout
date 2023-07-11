@@ -345,7 +345,7 @@ workflow = [('train', 1)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
 custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
-checkpoint_file = './models/epoch_375.pth'
+checkpoint_file = './models/ndl_retrainmodel.pth'
 fp16 = dict(loss_scale=dict(init_scale=512))
 classes = ('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
            'block_fig', 'block_table', 'block_pillar', 'block_folio',
