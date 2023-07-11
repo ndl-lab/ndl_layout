@@ -40,7 +40,7 @@ python -m tools.preprocess images_data_dir output_dir --use_link
 * `tools/process.py` : 推論用モジュール
 
 学習済みモデルを使って推論処理を実行します。
-学習済みのモデルは `ndl_layout/models` 下に配置する（または推論時に--checkpointオプションで指定）必要があります。
+学習済みのモデルは `ndl_layout/models` 下に下記のコマンドで配置する（または推論時に--checkpointオプションで指定）必要があります。
 
 ```
 wget -nc https://lab.ndl.go.jp/dataset/ndlocr_v2/ndl_layout/ndl_retrainmodel.pth -P ./ndl_layout/models
