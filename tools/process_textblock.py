@@ -59,20 +59,14 @@ class LayoutDetector:
         if img is None:
             img = cv2.imread(img_path)
 
-        if len(result) == 2:
-            res_bbox = result[0]
-        else:
-            res_bbox = result
-
-        for c in range(len(res_bbox)):
+        for pred,score,c in zip(result.pred_instances.bboxes,result.pred_instances.scores,result.pred_instances.labels):
             color = self.colors[c]
             color = (int(color[0]), int(color[1]), int(color[2]))
-            for pred in res_bbox[c]:
-                if float(pred[4]) < score_thr:
-                    continue
-                x0, y0 = int(pred[0]), int(pred[1])
-                x1, y1 = int(pred[2]), int(pred[3])
-                img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
+            if float(score) < score_thr:
+                continue
+            x0, y0 = int(pred[0]), int(pred[1])
+            x1, y1 = int(pred[2]), int(pred[3])
+            img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
 
         sz = max(img.shape[0], img.shape[1])
         scale = 1024.0 / sz
@@ -93,15 +87,14 @@ class LayoutDetector:
 
     def draw_rects_with_data(self, img, result, score_thr: float = 0.3, border: int = 3, show_legand: bool = True):
         import cv2
-        for c in range(len(result)):
+        for pred,score,c in zip(result.pred_instances.bboxes,result.pred_instances.scores,result.pred_instances.labels):
             color = self.colors[c]
             color = (int(color[0]), int(color[1]), int(color[2]))
-            for pred in result[c]:
-                if float(pred[4]) < score_thr:
-                    continue
-                x0, y0 = int(pred[0]), int(pred[1])
-                x1, y1 = int(pred[2]), int(pred[3])
-                img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
+            if float(score) < score_thr:
+                continue
+            x0, y0 = int(pred[0]), int(pred[1])
+            x1, y1 = int(pred[2]), int(pred[3])
+            img = cv2.rectangle(img, (x0, y0), (x1, y1), color, border)
 
         sz = max(img.shape[0], img.shape[1])
         scale = 1024.0 / sz
@@ -123,7 +116,6 @@ class LayoutDetector:
 def textblock_to_polygon(classes, res_segm, min_bbox_size=5):
     import cv2
     import numpy as np
-
     tb_cls_id = classes.index('text_block')
     polygons = []
 
@@ -355,8 +347,20 @@ def convert_to_xml_string2(img_w, img_h, img_path, classes, result,
     img_name = os.path.basename(img_path)
     s = f'<PAGE IMAGENAME = "{img_name}" WIDTH = "{img_w}" HEIGHT = "{img_h}">\n'
 
-    res_bbox = result[0]
-    res_segm = result[1]
+    #res_bbox = result[0]
+    #res_segm = result[1]
+    res_bbox = {}
+    res_segm ={}
+    for idx in range(len(classes)):
+        res_bbox[idx]=[]
+        res_segm[idx]=[]
+    for bbox,segm,cls,score in zip(result.pred_instances.bboxes,result.pred_instances.masks,result.pred_instances.labels,result.pred_instances.scores):
+        cls=int(cls)
+        s_bbox=bbox.to("cpu").detach().numpy().copy().tolist()
+        s_bbox.append(float(score))
+        res_bbox[cls].append(s_bbox)
+        res_segm[cls].append(segm.to("cpu").detach().numpy().copy())
+
 
     # convert text block masks to polygons
     tb_polygons = textblock_to_polygon(classes, res_segm, min_bbox_size)
@@ -471,9 +475,19 @@ def convert_to_xml_string_with_data(img_w, img_h, img_path, classes, result,
 
     img_name = os.path.basename(img_path)
     s = f'<PAGE IMAGENAME = "{img_name}" WIDTH = "{img_w}" HEIGHT = "{img_h}">\n'
+    #print(result)
 
-    res_bbox = result[0]
-    res_segm = result[1]
+    res_bbox = {}
+    res_segm ={}
+    for idx in range(len(classes)):
+        res_bbox[idx]=[]
+        res_segm[idx]=[]
+    for bbox,segm,cls,score in zip(result.pred_instances.bboxes,result.pred_instances.masks,result.pred_instances.labels,result.pred_instances.scores):
+        cls=int(cls)
+        s_bbox=bbox.to("cpu").detach().numpy().copy().tolist()
+        s_bbox.append(float(score))
+        res_bbox[cls].append(s_bbox)
+        res_segm[cls].append(segm.to("cpu").detach().numpy().copy())
 
     tb_polygons = textblock_to_polygon(classes, res_segm, min_bbox_size)
     tb_polygons = refine_tb_polygons(tb_polygons)
