@@ -1,12 +1,5 @@
 model = dict(
     type='CascadeRCNN',
-    data_preprocessor=dict(
-        type='DetDataPreprocessor',
-        mean=[123.675, 116.28, 103.53],
-        std=[58.395, 57.12, 57.375],
-        bgr_to_rgb=True,
-        pad_mask=True,
-        pad_size_divisor=32),
     backbone=dict(
         type='mmcls.ConvNeXt',
         arch='tiny',
@@ -163,7 +156,7 @@ image_size = 1024
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
-    #dict(type='Resize', img_scale=(1024, 1024), keep_ratio=True),
+    dict(type='Resize', img_scale=(1024, 1024), keep_ratio=True),
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(
         type='AutoAugment',
@@ -202,48 +195,121 @@ train_pipeline = [
                       'keep_ratio':
                       True
                   }]]),
-    #dict(type='Pad', size_divisor=32),
-    #dict(type='DefaultFormatBundle'),
-    #dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks'])
-    dict(type='PackDetInputs')
+    dict(
+        type='Normalize',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        to_rgb=True),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks'])
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(1024, 1024), keep_ratio=True),
-    dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
-    dict(type='PackDetInputs',
-        meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape','scale_factor'))
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1024, 1024),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='RandomFlip'),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img'])
+        ])
 ]
-
-train_dataloader = dict(
-    batch_size=2,
-    num_workers=2,
-    persistent_workers=True,  # Avoid recreating subprocesses after each iteration
-    sampler=dict(type='DefaultSampler', shuffle=True),  # Default sampler, supports both distributed and non-distributed training
-    batch_sampler=dict(type='AspectRatioBatchSampler'),  # Default batch_sampler, used to ensure that images in the batch have similar aspect ratios, so as to better utilize graphics memory
-    dataset=dict(
-        type=dataset_type,
-        data_root=data_root,
-        ann_file='/dummy/layoutinputs/kotensekicocotrain/train_kotensekicocotrain.json',
-        data_prefix=dict(img='/dummy/layoutinputs/kotensekicocotrain/img/'),
-        filter_cfg=dict(filter_empty_gt=True, min_size=32),
-        pipeline=train_pipeline))
-# In version 3.x, validation and test dataloaders can be configured independently
-val_dataloader = dict(
-    batch_size=1,
-    num_workers=2,
-    persistent_workers=True,
-    drop_last=False,
-    sampler=dict(type='DefaultSampler', shuffle=False),
-    dataset=dict(
-        type=dataset_type,
-        data_root=data_root,
-        ann_file='/dummy/layoutinputs/kotensekicocovalid/train_kotensekicocovalid.json',
-        data_prefix=dict(img='/dummy/layoutinputs/kotensekicocovalid/img/'),
-        test_mode=True,
-        pipeline=test_pipeline))
-test_dataloader = val_dataloader
-
+data = dict(
+    samples_per_gpu=1,
+    workers_per_gpu=0,
+    train=dict(
+        type='CocoDataset',
+        ann_file=
+        '/data/guest_data/ndl/data_coco/20230203_preprocessed/gakushu_202303.json',
+        img_prefix='/data/guest_data/ndl/data_coco/20230203_preprocessed',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
+            dict(type='Resize', img_scale=(1024, 1024), keep_ratio=True),
+            dict(type='RandomFlip', flip_ratio=0.5),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='Pad', size_divisor=32),
+            dict(type='DefaultFormatBundle'),
+            dict(
+                type='Collect',
+                keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks'])
+        ],
+        classes=('line_main', 'line_inote', 'line_hnote', 'line_caption',
+                 'line_ad', 'block_fig', 'block_table', 'block_pillar',
+                 'block_folio', 'block_rubi', 'block_chart', 'block_eqn',
+                 'block_cfm', 'block_eng', 'block_ad', 'text_block',
+                 'text_block_ad')),
+    val=dict(
+        type='CocoDataset',
+        ann_file=
+        '/data/guest_data/ndl/data_coco/20230203_preprocessed/hyouka_202303_1000.json',
+        img_prefix='/data/guest_data/ndl/data_coco/20230203_preprocessed',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(
+                type='MultiScaleFlipAug',
+                img_scale=(1024, 1024),
+                flip=False,
+                transforms=[
+                    dict(type='Resize', keep_ratio=True),
+                    dict(type='RandomFlip'),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size_divisor=32),
+                    dict(type='ImageToTensor', keys=['img']),
+                    dict(type='Collect', keys=['img'])
+                ])
+        ],
+        classes=('line_main', 'line_inote', 'line_hnote', 'line_caption',
+                 'line_ad', 'block_fig', 'block_table', 'block_pillar',
+                 'block_folio', 'block_rubi', 'block_chart', 'block_eqn',
+                 'block_cfm', 'block_eng', 'block_ad', 'text_block',
+                 'text_block_ad')),
+    test=dict(
+        type='CocoDataset',
+        ann_file=
+        '/data/guest_data/ndl/data_coco/20230203_preprocessed/hyouka_202303_1000.json',
+        img_prefix='/data/guest_data/ndl/data_coco/20230203_preprocessed',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(
+                type='MultiScaleFlipAug',
+                img_scale=(1024, 1024),
+                flip=False,
+                transforms=[
+                    dict(type='Resize', keep_ratio=True),
+                    dict(type='RandomFlip'),
+                    dict(
+                        type='Normalize',
+                        mean=[123.675, 116.28, 103.53],
+                        std=[58.395, 57.12, 57.375],
+                        to_rgb=True),
+                    dict(type='Pad', size_divisor=32),
+                    dict(type='ImageToTensor', keys=['img']),
+                    dict(type='Collect', keys=['img'])
+                ])
+        ],
+        classes=('line_main', 'line_inote', 'line_hnote', 'line_caption',
+                 'line_ad', 'block_fig', 'block_table', 'block_pillar',
+                 'block_folio', 'block_rubi', 'block_chart', 'block_eqn',
+                 'block_cfm', 'block_eng', 'block_ad', 'text_block',
+                 'text_block_ad')))
 evaluation = dict(interval=5, metric=['bbox', 'segm'], classwise=True)
 optimizer = dict(
     constructor='LearningRateDecayOptimizerConstructor',
