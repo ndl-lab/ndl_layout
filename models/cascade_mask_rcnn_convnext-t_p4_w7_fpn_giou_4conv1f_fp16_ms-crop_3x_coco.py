@@ -337,4 +337,3 @@ classes=('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
 metainfo = dict(
     classes=classes,
 )
-
