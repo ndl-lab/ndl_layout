@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List
 from lxml import etree as ET
 import mmcv
+import mmengine
 from mmdet.apis import (inference_detector, init_detector)
 from tqdm import tqdm
 
@@ -43,7 +44,7 @@ class LayoutDetector:
     def __init__(self, config: str, checkpoint: str, device: str):
         print(f'load from config={config}, checkpoint={checkpoint}')
         self.load(config, checkpoint, device)
-        cfg = mmcv.Config.fromfile(config)
+        cfg = mmengine.Config.fromfile(config)
         self.classes = cfg.classes
         self.colors = generate_class_colors(len(self.classes))
 
