@@ -22,6 +22,23 @@ model = dict(
         in_channels=[96, 192, 384, 768],
         out_channels=256,
         num_outs=5),
+    rpn_head=dict(
+        type='RPNHead',
+        in_channels=256,
+        feat_channels=256,
+        anchor_generator=dict(
+            type='AnchorGenerator',
+            scales=[8],
+            ratios=[0.04167, 0.0625, 0.125, 1.0, 8.0, 16.0, 24.0],
+            strides=[4, 8, 16, 32, 64]),
+        bbox_coder=dict(
+            type='DeltaXYWHBBoxCoder',
+            target_means=[0.0, 0.0, 0.0, 0.0],
+            target_stds=[1.0, 1.0, 1.0, 1.0]),
+        loss_cls=dict(
+            type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+        loss_bbox=dict(
+            type='SmoothL1Loss', beta=0.1111111111111111, loss_weight=1.0)),
     roi_head=dict(
         type='CascadeRoIHead',
         num_stages=3,
@@ -32,64 +49,23 @@ model = dict(
             out_channels=256,
             featmap_strides=[4, 8, 16, 32]),
         bbox_head=[
-            dict(
-                type='ConvFCBBoxHead',
-                num_shared_convs=4,
-                num_shared_fcs=1,
-                in_channels=256,
-                conv_out_channels=256,
-                fc_out_channels=1024,
-                roi_feat_size=7,
-                num_classes=17,
-                bbox_coder=dict(
-                    type='DeltaXYWHBBoxCoder',
-                    target_means=[0., 0., 0., 0.],
-                    target_stds=[0.1, 0.1, 0.2, 0.2]),
-                reg_class_agnostic=False,
-                reg_decoded_bbox=True,
-                norm_cfg=dict(type='SyncBN', requires_grad=True),
-                loss_cls=dict(
-                    type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-                loss_bbox=dict(type='GIoULoss', loss_weight=10.0)),
-            dict(
-                type='ConvFCBBoxHead',
-                num_shared_convs=4,
-                num_shared_fcs=1,
-                in_channels=256,
-                conv_out_channels=256,
-                fc_out_channels=1024,
-                roi_feat_size=7,
-                num_classes=17,
-                bbox_coder=dict(
-                    type='DeltaXYWHBBoxCoder',
-                    target_means=[0., 0., 0., 0.],
-                    target_stds=[0.05, 0.05, 0.1, 0.1]),
-                reg_class_agnostic=False,
-                reg_decoded_bbox=True,
-                norm_cfg=dict(type='SyncBN', requires_grad=True),
-                loss_cls=dict(
-                    type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-                loss_bbox=dict(type='GIoULoss', loss_weight=10.0)),
-            dict(
-                type='ConvFCBBoxHead',
-                num_shared_convs=4,
-                num_shared_fcs=1,
-                in_channels=256,
-                conv_out_channels=256,
-                fc_out_channels=1024,
-                roi_feat_size=7,
-                num_classes=17,
-                bbox_coder=dict(
-                    type='DeltaXYWHBBoxCoder',
-                    target_means=[0., 0., 0., 0.],
-                    target_stds=[0.033, 0.033, 0.067, 0.067]),
-                reg_class_agnostic=False,
-                reg_decoded_bbox=True,
-                norm_cfg=dict(type='SyncBN', requires_grad=True),
-                loss_cls=dict(
-                    type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-                loss_bbox=dict(type='GIoULoss', loss_weight=10.0))
-        ]),
+            dict(type='Shared2FCBBoxHead', num_classes=17),
+            dict(type='Shared2FCBBoxHead', num_classes=17),
+            dict(type='Shared2FCBBoxHead', num_classes=17)
+        ],
+        mask_roi_extractor=dict(
+            type='SingleRoIExtractor',
+            roi_layer=dict(type='RoIAlign', output_size=14, sampling_ratio=0),
+            out_channels=256,
+            featmap_strides=[4, 8, 16, 32, 64]),
+        mask_head=dict(
+            type='FCNMaskHead',
+            num_convs=4,
+            in_channels=256,
+            conv_out_channels=256,
+            num_classes=17,
+            loss_mask=dict(
+                type='CrossEntropyLoss', use_mask=True, loss_weight=1.0))),
     train_cfg=dict(
         rpn=dict(
             assigner=dict(
@@ -176,8 +152,7 @@ model = dict(
             score_thr=0.05,
             nms=dict(type='nms', iou_threshold=0.5),
             max_per_img=5000,
-            mask_thr_binary=0.5))
-)
+            mask_thr_binary=0.5)))
 
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -355,10 +330,11 @@ work_dir = 'workdirs/20230309_convnext_allgakushu'
 seed = 0
 gpu_ids = range(0, 4)
 device = 'cuda'
-metainfo = dict(
-    classes=('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
+classes=('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
            'block_fig', 'block_table', 'block_pillar', 'block_folio',
            'block_rubi', 'block_chart', 'block_eqn', 'block_cfm', 'block_eng',
-           'block_ad', 'text_block', 'text_block_ad'),
-
+           'block_ad', 'text_block', 'text_block_ad')
+metainfo = dict(
+    classes=classes,
 )
+
