@@ -344,7 +344,7 @@ resume_from = 'checkpoints/cascade_mask_rcnn_convnext-t_p4_w7_fpn_giou_4conv1f_f
 workflow = [('train', 1)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
-custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 checkpoint_file = './models/ndl_retrainmodel.pth'
 fp16 = dict(loss_scale=dict(init_scale=512))
 classes = ('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
