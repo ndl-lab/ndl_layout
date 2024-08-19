@@ -1,7 +1,7 @@
 model = dict(
     type='CascadeRCNN',
     backbone=dict(
-        type='mmcls.ConvNeXt',
+        type='mmpretrain.ConvNeXt',
         arch='tiny',
         out_indices=[0, 1, 2, 3],
         drop_path_rate=0.4,
@@ -336,7 +336,7 @@ resume_from = 'workdirs/20230206_convnext_allgakushu/latest.pth'
 workflow = [('train', 1)]
 opencv_num_threads = 0
 mp_start_method = 'fork'
-custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 checkpoint_file = 'https://download.openmmlab.com/mmclassification/v0/convnext/downstream/convnext-tiny_3rdparty_32xb128-noema_in1k_20220301-795e9634.pth'
 fp16 = dict(loss_scale=dict(init_scale=512))
 classes = ('line_main', 'line_inote', 'line_hnote', 'line_caption', 'line_ad',
