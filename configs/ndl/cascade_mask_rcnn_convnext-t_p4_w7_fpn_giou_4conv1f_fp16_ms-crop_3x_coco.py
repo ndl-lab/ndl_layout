@@ -6,7 +6,7 @@
 model = dict(
     type='CascadeRCNN',
     backbone=dict(
-        type='mmcls.ConvNeXt',
+        type='mmpretrain.ConvNeXt',
         arch='tiny',
         out_indices=[0, 1, 2, 3],
         drop_path_rate=0.4,
