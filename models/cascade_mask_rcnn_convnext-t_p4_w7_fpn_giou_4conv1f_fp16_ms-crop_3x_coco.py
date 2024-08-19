@@ -8,7 +8,7 @@ model = dict(
         pad_mask=True,
         pad_size_divisor=32),
     backbone=dict(
-        type='mmcls.ConvNeXt',
+        type='mmpretrain.ConvNeXt',
         arch='tiny',
         out_indices=[0, 1, 2, 3],
         drop_path_rate=0.4,
@@ -322,7 +322,7 @@ log_processor = dict(
 log_level = 'INFO'
 load_from = 'workdirs/20230206_convnext_allgakushu/latest.pth'
 resume = False
-custom_imports = dict(imports=['mmcls.models'], allow_failed_imports=False)
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
 checkpoint_file = 'https://download.openmmlab.com/mmclassification/v0/convnext-v2/convnext-v2-tiny_fcmae-in21k-pre_3rdparty_in1k-384px_20230104-d8579f84.pth'
 image_size = (1024, 1024)
 max_epochs = 500
